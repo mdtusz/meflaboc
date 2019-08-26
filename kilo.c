@@ -18,8 +18,20 @@ void enableRawMode() {
 
     struct termios raw = original_termios;
 
-    // Disable echoing all keyboard input to the terminal.
-    raw.c_lflag &= ~(ECHO | ICANON);
+    // Disable some terminal settings that are undesirable.
+    //
+    // ECHO -> character input is not echoed.
+    // ICANON -> canonical mode is off (i.e. chars will be read immediately).
+    // ISIG -> Signals (Ctrl-C and Ctrl-Z) disabled.
+    // IEXTEN -> Ctrl-V disabled.
+    raw.c_lflag &= ~(ECHO | ICANON | ISIG);
+
+    // IXON -> Software control flow (Ctrl-S and Ctrl-Q) disabled.
+    // ICRNL -> Disable CRNL where \r converted to \n.
+    raw.c_iflag &= ~(IXON | ICRNL);
+
+    // OPOST -> Disable output post-processing (i.e. \n -> \r\n).
+    raw.c_oflag &= ~(OPOST);
 
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
