@@ -1,10 +1,20 @@
+#include <stdlib.h>
 #include <termios.h>
 #include <unistd.h>
 
-void enableRawMode() {
-    struct termios raw;
+struct termios original_termios;
 
-    tcgetattr(STDIN_FILENO, &raw);
+void disableRawMode() {
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios);
+}
+
+void enableRawMode() {
+    tcgetattr(STDIN_FILENO, &original_termios);
+
+    // Turn off raw mode at exit so the terminal behaves normally again.
+    atexit(disableRawMode);
+
+    struct termios raw = original_termios;
 
     // Disable echoing all keyboard input to the terminal.
     raw.c_lflag &= ~(ECHO);
