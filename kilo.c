@@ -17,7 +17,7 @@ void enableRawMode() {
     struct termios raw = original_termios;
 
     // Disable echoing all keyboard input to the terminal.
-    raw.c_lflag &= ~(ECHO);
+    raw.c_lflag &= ~(ECHO | ICANON);
 
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
