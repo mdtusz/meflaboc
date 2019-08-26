@@ -6,6 +6,11 @@
 
 struct termios original_termios;
 
+void die(const char *s) {
+    perror(s);
+    exit(1);
+}
+
 void disableRawMode() {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios);
 }
