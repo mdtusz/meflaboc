@@ -28,10 +28,16 @@ void enableRawMode() {
 
     // IXON -> Software control flow (Ctrl-S and Ctrl-Q) disabled.
     // ICRNL -> Disable CRNL where \r converted to \n.
-    raw.c_iflag &= ~(IXON | ICRNL);
+    // BRKINT -> Disables break conditions.
+    // INPCK -> Disables parity checking.A
+    // ISTRIP -> Disables bit stripping (?).
+    raw.c_iflag &= ~(IXON | ICRNL | BRKINT | INPCK);
 
     // OPOST -> Disable output post-processing (i.e. \n -> \r\n).
     raw.c_oflag &= ~(OPOST);
+
+    // Set character size to 8 bits per byte.
+    raw.c_cflag |= (CS8);
 
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
