@@ -2,12 +2,20 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 
-struct termios original_termios;
+
+struct editorConfig {
+    struct termios original_termios;
+    int screenRows;
+    int screenCols;
+};
+
+struct editorConfig E;
 
 void editorClearScreen() {
     write(STDOUT_FILENO, "\x1b[2J", 4);
@@ -21,20 +29,20 @@ void die(const char *s) {
 }
 
 void disableRawMode() {
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios) == -1) {
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.original_termios) == -1) {
         die("tcsetattr");
     }
 }
 
 void enableRawMode() {
-    if (tcgetattr(STDIN_FILENO, &original_termios) == -1) {
+    if (tcgetattr(STDIN_FILENO, &E.original_termios) == -1) {
         die("tcgetattr");
     }
 
     // Turn off raw mode at exit so the terminal behaves normally again.
     atexit(disableRawMode);
 
-    struct termios raw = original_termios;
+    struct termios raw = E.original_termios;
 
     // Disable some terminal settings that are undesirable.
     //
@@ -67,6 +75,18 @@ void enableRawMode() {
     }
 }
 
+int getWindowSize(int *rows, int *cols) {
+    struct winsize ws;
+
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
+        return -1;
+    } else {
+        *cols = ws.ws_col;
+        *rows = ws.ws_row;
+        return 1;
+    }
+}
+
 char editorReadKey() {
     int nread;
     char c;
@@ -82,7 +102,7 @@ char editorReadKey() {
 
 void editorDrawRows() {
     int y;
-    for (y = 0; y < 80; y++) {
+    for (y = 0; y < E.screenRows; y++) {
         write(STDOUT_FILENO, "~\r\n", 3);
     }
 }
@@ -103,8 +123,15 @@ void editorProcessKey() {
     }
 }
 
+void initEditor() {
+    if (getWindowSize(&E.screenRows, &E.screenCols) == -1) {
+        die("getWindowSize");
+    }
+}
+
 int main() {
     enableRawMode();
+    initEditor();
 
     while (1) {
         editorRefreshScreen();
