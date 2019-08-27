@@ -9,13 +9,13 @@
 
 struct termios original_termios;
 
-void editorRefreshScreen() {
+void editorClearScreen() {
     write(STDOUT_FILENO, "\x1b[2J", 4);
     write(STDOUT_FILENO, "\x1b[H", 3);
 }
 
 void die(const char *s) {
-    editorRefreshScreen();
+    editorClearScreen();
     perror(s);
     exit(1);
 }
@@ -80,12 +80,24 @@ char editorReadKey() {
     return c;
 }
 
+void editorDrawRows() {
+    int y;
+    for (y = 0; y < 80; y++) {
+        write(STDOUT_FILENO, "~\r\n", 3);
+    }
+}
+
+void editorRefreshScreen() {
+    editorClearScreen();
+    editorDrawRows();
+}
+
 void editorProcessKey() {
     char c = editorReadKey();
 
     switch (c) {
         case CTRL_KEY('q'):
-            editorRefreshScreen();
+            editorClearScreen();
             exit(0);
             break;
     }
