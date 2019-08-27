@@ -1,2 +1,2 @@
-kilo: kilo.c
-	$(CC) kilo.c -o kilo -Wall -Wextra -pedantic -std=c99
+mef: main.c
+	$(CC) main.c -o mef -Wall -Wextra -pedantic -std=c99

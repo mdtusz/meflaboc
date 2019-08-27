@@ -1,3 +1,3 @@
-# Kilo
+# meflaboc
 
-In an attempt to up my c-foo, I'm following along [this tutorial](https://viewsourcecode.org/snaptoken/kilo/index.html) on how to make a minimal text editor.
+Minimal editor for learning a bit of C, following along with [this tutorial](https://viewsourcecode.org/snaptoken/kilo/index.html).
