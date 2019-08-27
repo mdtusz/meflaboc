@@ -2,11 +2,13 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 
 #define CTRL_KEY(k) ((k) & 0x1f)
+#define ABUF_INIT {NULL, 0}
 
 
 struct editorConfig {
@@ -17,13 +19,39 @@ struct editorConfig {
 
 struct editorConfig E;
 
-void editorClearScreen() {
-    write(STDOUT_FILENO, "\x1b[2J", 4);
-    write(STDOUT_FILENO, "\x1b[H", 3);
+struct abuf {
+    char *buf;
+    int len;
+};
+
+void abufAppend(struct abuf *ab, const char *s, int len) {
+    char *new = realloc(ab->buf, ab->len + len);
+
+    if (new == NULL) {
+        return;
+    }
+
+    memcpy(&new[ab->len], s, len);
+    ab->buf = new;
+    ab->len += len;
+}
+
+void abufFree(struct abuf *ab) {
+    free(ab->buf);
+}
+
+void editorClearScreen(struct abuf *ab) {
+    abufAppend(ab, "\x1b[2J", 4);
+    abufAppend(ab, "\x1b[H", 3);
 }
 
 void die(const char *s) {
-    editorClearScreen();
+    struct abuf ab = ABUF_INIT;
+
+    editorClearScreen(&ab);
+    write(STDOUT_FILENO, ab.buf, ab.len);
+    abufFree(&ab);
+
     perror(s);
     exit(1);
 }
@@ -128,28 +156,46 @@ int getWindowSize(int *rows, int *cols) {
     }
 }
 
-void editorDrawRows() {
+void editorDrawRows(struct abuf *ab) {
     int y;
     for (y = 0; y < E.screenRows; y++) {
-        write(STDOUT_FILENO, "~", 1);
+        abufAppend(ab, "~", 1);
 
         if (y < E.screenRows - 1) {
-            write(STDOUT_FILENO, "\r\n", 2);
+            abufAppend(ab, "\r\n", 2);
         }
     }
 }
 
+void editorHideCursor(struct abuf *ab) {
+    abufAppend(ab, "\x1b[?25l", 6);
+}
+
+void editorShowCursor(struct abuf *ab) {
+    abufAppend(ab, "\x1b[?25h", 6);
+}
+
 void editorRefreshScreen() {
-    editorClearScreen();
-    editorDrawRows();
+    struct abuf ab = ABUF_INIT;
+
+    editorHideCursor(&ab);
+    editorClearScreen(&ab);
+    editorDrawRows(&ab);
+    editorShowCursor(&ab);
+
+    write(STDOUT_FILENO, ab.buf, ab.len);
+    abufFree(&ab);
 }
 
 void editorProcessKey() {
     char c = editorReadKey();
+    struct abuf ab = ABUF_INIT;
 
     switch (c) {
         case CTRL_KEY('q'):
-            editorClearScreen();
+            editorClearScreen(&ab);
+            write(STDOUT_FILENO, ab.buf, ab.len);
+            abufFree(&ab);
             exit(0);
             break;
     }
