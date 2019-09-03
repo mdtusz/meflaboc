@@ -7,6 +7,8 @@
 #include <termios.h>
 #include <unistd.h>
 
+#define MEF_VERSION "0.0.1"
+
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define ABUF_INIT {NULL, 0}
 
@@ -159,7 +161,20 @@ int getWindowSize(int *rows, int *cols) {
 void editorDrawRows(struct abuf *ab) {
     int y;
     for (y = 0; y < E.screenRows; y++) {
-        abufAppend(ab, "~", 1);
+        if (y == E.screenRows - 1) {
+            char welcome[E.screenCols];
+            int welcomeLen = snprintf(welcome, sizeof(welcome), ":Mef -- V%s", MEF_VERSION);
+
+            if (welcomeLen > E.screenCols) {
+                welcomeLen = E.screenCols;
+            }
+
+            abufAppend(ab, welcome, welcomeLen);
+        } else {
+            abufAppend(ab, "~", 1);
+        }
+
+        abufAppend(ab, "\x1b[k", 3);
 
         if (y < E.screenRows - 1) {
             abufAppend(ab, "\r\n", 2);
