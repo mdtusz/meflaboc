@@ -196,8 +196,15 @@ void editorRefreshScreen() {
     struct abuf ab = ABUF_INIT;
 
     editorHideCursor(&ab);
+
     editorClearScreen(&ab);
     editorDrawRows(&ab);
+
+    // Move cursor to position.
+    char buf[32];
+    snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx + 1);
+    abufAppend(&ab, buf, strlen(buf));
+
     editorShowCursor(&ab);
 
     write(STDOUT_FILENO, ab.buf, ab.len);
