@@ -31,6 +31,13 @@ struct abuf {
     int len;
 };
 
+enum editorKey {
+    ARROW_LEFT = 1000,
+    ARROW_RIGHT,
+    ARROW_UP,
+    ARROW_DOWN
+};
+
 void abufAppend(struct abuf *ab, const char *s, int len) {
     char *new = realloc(ab->buf, ab->len + len);
 
@@ -103,14 +110,14 @@ void enableRawMode() {
     raw.c_cc[VMIN] = 0;
 
     // Set max time before `read` will timeout and return 0.
-    raw.c_cc[VTIME] = 1;
+    raw.c_cc[VTIME] = 100;
 
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) {
         die("tcsetattr");
     }
 }
 
-char editorReadKey() {
+int editorReadKey() {
     int nread;
     char c;
 
@@ -119,6 +126,25 @@ char editorReadKey() {
             die("read");
         }
     }
+
+    // If an escape sequence is detected, check for special keys (3 bytes).
+    if (c == '\x1b') {
+        char seq[3];
+
+        if (read(STDIN_FILENO, &seq[0], 1) != 1 || read(STDIN_FILENO, &seq[1], 1) != 1) {
+            return '\x1b';
+        }
+
+        if (seq[0] == '[') {
+            switch (seq[1]) {
+                case 'A': return ARROW_UP;
+                case 'B': return ARROW_DOWN;
+                case 'C': return ARROW_RIGHT;
+                case 'D': return ARROW_LEFT;
+            }
+        }
+    }
+
 
     return c;
 }
@@ -214,17 +240,21 @@ void editorRefreshScreen() {
     abufFree(&ab);
 }
 
-void editorMoveCursor(char c) {
-    switch (c) {
+void editorMoveCursor(int key) {
+    switch (key) {
+        case ARROW_LEFT:
         case 'h':
             E.cx = max(0, E.cx - 1);
             break;
+        case ARROW_DOWN:
         case 'j':
             E.cy = min(E.screenRows - 1, E.cy + 1);
             break;
+        case ARROW_UP:
         case 'k':
             E.cy = max(0, E.cy - 1);
             break;
+        case ARROW_RIGHT:
         case 'l':
             E.cx = min(E.screenCols - 1, E.cx + 1);
             break;
@@ -232,10 +262,10 @@ void editorMoveCursor(char c) {
 }
 
 void editorProcessKey() {
-    char c = editorReadKey();
+    int key = editorReadKey();
     struct abuf ab = ABUF_INIT;
 
-    switch (c) {
+    switch (key) {
         case CTRL_KEY('q'):
             editorClearScreen(&ab);
             write(STDOUT_FILENO, ab.buf, ab.len);
@@ -243,7 +273,7 @@ void editorProcessKey() {
             exit(0);
             break;
         default:
-            editorMoveCursor(c);
+            editorMoveCursor(key);
             break;
     }
 }
