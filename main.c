@@ -9,6 +9,9 @@
 
 #define MEF_VERSION "0.0.1"
 
+#define max(a, b) ((a) > (b) ? (a) : (b))
+#define min(a, b) ((a) < (b) ? (a) : (b))
+
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define ABUF_INIT {NULL, 0}
 
@@ -211,6 +214,23 @@ void editorRefreshScreen() {
     abufFree(&ab);
 }
 
+void editorMoveCursor(char c) {
+    switch (c) {
+        case 'h':
+            E.cx = max(0, E.cx - 1);
+            break;
+        case 'j':
+            E.cy = min(E.screenRows - 1, E.cy + 1);
+            break;
+        case 'k':
+            E.cy = max(0, E.cy - 1);
+            break;
+        case 'l':
+            E.cx = min(E.screenCols - 1, E.cx + 1);
+            break;
+    }
+}
+
 void editorProcessKey() {
     char c = editorReadKey();
     struct abuf ab = ABUF_INIT;
@@ -221,6 +241,9 @@ void editorProcessKey() {
             write(STDOUT_FILENO, ab.buf, ab.len);
             abufFree(&ab);
             exit(0);
+            break;
+        default:
+            editorMoveCursor(c);
             break;
     }
 }
